@@ -26,6 +26,7 @@ import React from 'react';
 import axios from 'axios';
 import useEventCenter from 'thx-event-center';
 
+// given a page UUID like 'pageIsProduct', for work at this page only.
 const {initEventCenter, callCenter} = useEventCenter('pageIsProduct');
 
 const productRequest = axios.create({
@@ -104,6 +105,8 @@ const apiUpdateProduct = function(data){
     });
   });
 }; 
+// api call examples given above, it's provided for your reference.
+// plz place they to other files in your project is better!
 
 
 const ProductPage = () =&gt; {
@@ -231,6 +234,7 @@ const ProductPage = () =&gt; {
    
   }; 
 
+  // ++++++++ MVEC's core here ++++++++
   // ======== event center start ========
   React.useMemo(() =&gt; {
 
@@ -319,7 +323,7 @@ const ProductPage = () =&gt; {
       };
  
  
-      // public events
+      // public events, allow callCenter access.
       return {
         listAllProducts: listAllProducts,
         showProduct    : showProduct,
