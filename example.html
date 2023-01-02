@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>thx-event-center example</title>
+    
+    <script src="./public/js/axios-1.2.1.min.js"></script>
+    <script src="./public/js/browser-5.8.23.min.js"></script>
+    <script src='./public/js/browser-polyfill-5.8.23.min.js'></script>
+    <script src="./public/js/react.development-17.0.2.js"></script>
+    <script src="./public/js/react-dom.development-17.0.2.js"></script>
+    <script src="./public/js/thx-event-center.js"></script>
+  </head>
+  <body>
+  <div id="app"></div>
+  <script type="text/babel">
+  
+  const {useEventCenter} = thxEventCenter;
+  
+  const {initEventCenter, callCenter} = useEventCenter('pageIsProduct');
+  
+  const productRequest = axios.create({
+    baseURL: 'https://dummyjson.com',
+    // CORS must open
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    withCredentials: false,
+  });
+
+  const apiGetAllProducts = function(){
+    return new Promise((resolve, reject) => {
+      productRequest.get('/products?limit=10&select=title,id')
+      .then(function (response) {
+          
+        resolve(response.data);
+      }).catch(function (error) {
+        reject({
+          'state' : error
+        });
+      });
+    });
+  };
+
+  const apiGetProduct = function(productId){
+    return new Promise((resolve, reject) => {
+      productRequest.get('/products/'+ productId)
+      .then(function (response) {
+          
+        resolve(response.data);
+      }).catch(function (error) {
+        reject({
+          'state' : error
+        });
+      });
+    });
+  };
+ 
+  const apiDelProduct = function(productId){
+    return new Promise((resolve, reject) => {
+      productRequest.delete('/products/'+ productId)
+      .then(function (response) {
+          
+        resolve(response.data);
+      }).catch(function (error) {
+        reject({
+          'state' : error
+        });
+      });
+    });
+  }; 
+
+  const apiAddProduct = function(data){
+    return new Promise((resolve, reject) => {
+      productRequest.post('/products/add', data)
+      .then(function (response) {
+          
+        resolve(response.data);
+      }).catch(function (error) {
+        reject({
+          'state' : error
+        });
+      });
+    });
+  }; 
+
+  const apiUpdateProduct = function(data){
+    return new Promise((resolve, reject) => {
+      productRequest.patch('/products/'+ data.id, {headers: {'Content-Type': 'application/json'}}, data)
+      .then(function (response) {
+          
+        resolve(response.data);
+      }).catch(function (error) {
+        reject({
+          'state' : error
+        });
+      });
+    });
+  }; 
+  
+  
+  const App = () => {
+ 
+    const [viewComponent1, setViewComponent1] = React.useState('');
+    const [viewComponent2, setViewComponent2] = React.useState('');
+  
+    const ComponentList = (rows) => {
+ 
+      let ele = [];
+   
+      ele = rows.map((row, i) => {
+  
+        return (<li key={row.id}>
+          <a href="#" onClick={(e) => {
+
+            e.preventDefault();
+     
+            callCenter({eventName:'showProduct', params:row.id});
+              
+          }}>{row.title}</a>
+
+          &nbsp;&nbsp;
+          <button style={{float:'right'}} onClick={() => {
+       
+            callCenter({eventName:'delProduct', params:row.id});
+       
+          }}>delete</button>
+
+          &nbsp;&nbsp;
+          <button style={{float:'right'}} onClick={() => {
+       
+            callCenter({eventName:'editProduct', params:row.id});
+       
+          }}>edit</button>
+          <hr/>
+        </li>);
+      });
+  
+      return (
+        <ul>{ele}</ul>
+      );
+    }; 
+
+    const ComponentDetail = ({title, description, price, thumbnail}) => {
+ 
+      return (<div style={{border:'solid #ddd 1px'}}>
+        <div>{title}</div>
+        <br/><hr/>
+        <div>{description}</div>
+        <div><img style={{maxWidth:'100%'}} src={thumbnail} /></div>
+        <div>${price}</div>
+      </div>);
+    }; 
+
+    const ComponentEditor = (type='add', data={}) => {
+
+      let id          = data.id || '';
+      let title       = data.title || '';
+      let description = data.description || '';
+      let thumbnail   = data.thumbnail || '';
+      let price       = data.price || '';
+     
+      return (<div key={
+        // *** force upate component
+        Date.now()
+      } 
+      style={{border:'solid #ddd 1px'}}>
+        <div>
+          <button style={{float:'right'}} onClick={function(){
+           
+            callCenter({eventName:'closeEditor'})
+          
+          }}>close editor</button>
+        </div>
+        <div>
+          title
+          <br/>
+          <input id="title" type="text" defaultValue={title} />
+        </div>
+        <br/>
+        <div>
+          description
+          <br/>
+          <textarea id="desc" defaultValue={description} rows="4" cols="50"/>
+        </div>
+        <br/>
+        <div>
+          thumbnail url
+          <br/>
+          <input id="imgSrc" type="text" defaultValue={thumbnail} />
+        </div>
+        <br/>
+        <div>
+          price
+          <br/>
+          <input id="price" type="number" defaultValue={price} />
+        </div>
+
+        <br/>
+        <div><button onClick={() => {
+           
+          if(type == 'edit'){
+               
+            callCenter({eventName:'updateProduct', params:{
+              id         : id,
+              title      : document.getElementById('title').value,
+              description: document.getElementById('desc').value,
+              thumbnail  : document.getElementById('imgSrc').value,
+              price      : document.getElementById('price').value
+            }})
+               
+          }else{
+
+            callCenter({eventName:'addProduct', params:{
+              title      : document.getElementById('title').value,
+              description: document.getElementById('desc').value,
+              thumbnail  : document.getElementById('imgSrc').value,
+              price      : document.getElementById('price').value
+            }})
+          }
+       
+        }}>submit</button></div>
+     </div>);
+     
+    }; 
+
+    // ======== event center start ========
+    React.useMemo(() => {
+
+      const controller = (() => {
+ 
+        let thisList = [];
+   
+        const listAllProducts = async () => {
+   
+          let res = await apiGetAllProducts();
+   
+          thisList = res.products;
+   
+          setViewComponent1(ComponentList(res.products));
+        };
+   
+        const showProduct = async (productId) => {
+    
+          let res = await apiGetProduct(productId);
+    
+          setViewComponent2(ComponentDetail(res));
+        };
+   
+        const delProduct = async (productId) => {
+   
+          let res = await apiDelProduct(productId);
+    
+          let updateArray = [];
+    
+          if(res.isDeleted){
+
+            alert('ok');
+   
+            updateArray = thisList.filter((product) => {
+        
+              return product.id != productId
+            });
+     
+            thisList = updateArray;
+     
+            setViewComponent1(ComponentList(thisList));
+          }
+        };
+   
+        const editProduct = async (productId=-1) => {
+
+          if( productId != -1 ){
+
+            let res = await apiGetProduct(productId);
+
+            setViewComponent2(ComponentEditor('edit', res));
+          }else{
+
+            setViewComponent2(ComponentEditor('add'));
+          }   
+        };
+   
+        const addProduct = async (data) => {
+      
+          let res = await apiAddProduct(data);
+     
+          if( res.id >= 0 ){
+
+            alert('ok');
+       
+            data.id = res.id;
+       
+            thisList.push(data);
+         
+            setViewComponent1(ComponentList(thisList));
+          }
+        };
+   
+        const updateProduct = async (data) => {
+      
+          let res = await apiUpdateProduct(data);
+       
+          console.log(res);
+       
+          // TODO: 
+        };
+
+        const closeEditor = () => {
+      
+          setViewComponent2('');
+        };
+   
+   
+        // public events
+        return {
+          listAllProducts: listAllProducts,
+          showProduct    : showProduct,
+          delProduct     : delProduct,
+          editProduct    : editProduct,
+          addProduct     : addProduct,
+          updateProduct  : updateProduct,
+          closeEditor    : closeEditor
+        };
+
+      }());
+ 
+
+      initEventCenter(controller);
+      
+    }, []);
+    // ======== event center end ========
+ 
+    return (<div>
+
+      <button onClick={function(){
+         
+        callCenter({eventName:'listAllProducts'})
+        
+      }}>list products</button>
+      
+      <br/>
+
+      {viewComponent1}
+
+      <br/>
+
+      <button onClick={function(){
+         
+        callCenter({eventName:'editProduct'})
+        
+      }}>create product</button>
+
+      {viewComponent2}
+
+    </div>);
+  };
+
+  ReactDOM.render(
+    <App />,
+    document.querySelector('#app')
+  );
+  </script>
+  </body>
+</html>
